@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Status</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0d0d0f;
+    --surface: #141416;
+    --border: #1e1e22;
+    --text: #e8e8ed;
+    --muted: #6b6b7a;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #eab308;
+    --accent: #6366f1;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  header {
+    max-width: 900px;
+    margin: 0 auto 3rem;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.25rem;
+  }
+
+  header h1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  header span {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  .window-control {
+    max-width: 900px;
+    margin: 0 auto 2rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .window-control label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-right: 0.25rem;
+  }
+
+  .window-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s;
+  }
+
+  .window-btn:hover, .window-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(99,102,241,0.08);
+  }
+
+  .domains {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .domain-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .domain-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .status-dot.up { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status-dot.down { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .status-dot.unknown { background: var(--muted); }
+
+  .domain-name {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 500;
+    flex: 1;
+  }
+
+  .domain-meta {
+    display: flex;
+    gap: 1.5rem;
+  }
+
+  .meta-item {
+    text-align: right;
+  }
+
+  .meta-item .val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  .meta-item .lbl {
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .val.up { color: var(--green); }
+  .val.down { color: var(--red); }
+
+  .charts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+
+  .chart-wrap {
+    padding: 1rem 1.25rem 1.25rem;
+    position: relative;
+  }
+
+  .chart-wrap:first-child {
+    border-right: 1px solid var(--border);
+  }
+
+  .chart-wrap h3 {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+    font-weight: 400;
+  }
+
+  .chart-wrap canvas { max-height: 120px; }
+
+  .loading-msg {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    padding: 2rem 1.25rem;
+    text-align: center;
+  }
+
+  /* Incidents */
+  .incidents-section {
+    border-top: 1px solid var(--border);
+    padding: 1rem 1.25rem;
+  }
+
+  .incidents-section h3 {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+    font-weight: 400;
+  }
+
+  .incident {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+  }
+
+  .incident:last-child { border-bottom: none; }
+
+  .incident-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    padding: 0.2rem 0.45rem;
+    border-radius: 3px;
+    flex-shrink: 0;
+    align-self: flex-start;
+  }
+
+  .incident-badge.open { background: rgba(239,68,68,0.15); color: var(--red); }
+  .incident-badge.resolved { background: rgba(34,197,94,0.1); color: var(--green); }
+
+  .incident-title { font-weight: 500; margin-bottom: 0.2rem; }
+  .incident-desc { color: var(--muted); font-size: 0.75rem; }
+  .incident-time { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--muted); margin-top: 0.2rem; }
+
+  @media (max-width: 600px) {
+    .charts { grid-template-columns: 1fr; }
+    .chart-wrap:first-child { border-right: none; border-bottom: 1px solid var(--border); }
+    .domain-meta { gap: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>◈ System Status</h1>
+  <span id="last-updated"></span>
+</header>
+
+<div class="window-control">
+  <label>Window:</label>
+  <button class="window-btn" data-h="1">1h</button>
+  <button class="window-btn active" data-h="24">24h</button>
+  <button class="window-btn" data-h="48">48h</button>
+  <button class="window-btn" data-h="168">7d</button>
+</div>
+
+<div class="domains">
+  {% for domain in domains %}
+  <div class="domain-card" id="card-{{ domain.id }}">
+    <div class="domain-header">
+      <span class="status-dot unknown" id="dot-{{ domain.id }}"></span>
+      <span class="domain-name">{{ domain.name }}</span>
+      <div class="domain-meta">
+        <div class="meta-item">
+          <div class="val" id="uptime-{{ domain.id }}">—</div>
+          <div class="lbl">Uptime</div>
+        </div>
+        <div class="meta-item">
+          <div class="val" id="ms-{{ domain.id }}">—</div>
+          <div class="lbl">Last ms</div>
+        </div>
+      </div>
+    </div>
+    <div class="charts">
+      <div class="chart-wrap">
+        <h3>Up / Down</h3>
+        <canvas id="updown-{{ domain.id }}"></canvas>
+      </div>
+      <div class="chart-wrap">
+        <h3>Response Time (ms)</h3>
+        <canvas id="rt-{{ domain.id }}"></canvas>
+      </div>
+    </div>
+    <div id="incidents-{{ domain.id }}"></div>
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+const DOMAINS = [{% for d in domains %}{ id: {{ d.id }}, name: "{{ d.name }}" },{% endfor %}];
+const charts = {};
+let currentHours = 24;
+
+const chartDefaults = {
+  responsive: true,
+  maintainAspectRatio: true,
+  animation: false,
+  plugins: { legend: { display: false }, tooltip: { mode: "index", intersect: false } },
+  scales: {
+    x: { display: false },
+    y: { grid: { color: "#1e1e22" }, ticks: { color: "#6b6b7a", font: { family: "IBM Plex Mono", size: 10 } } }
+  }
+};
+
+function mkCharts(id) {
+  const upCtx = document.getElementById(`updown-${id}`);
+  const rtCtx = document.getElementById(`rt-${id}`);
+  charts[`up-${id}`] = new Chart(upCtx, {
+    type: "bar",
+    data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderRadius: 2, barThickness: 6 }] },
+    options: { ...chartDefaults, scales: { ...chartDefaults.scales, y: { ...chartDefaults.scales.y, min: 0, max: 1, ticks: { ...chartDefaults.scales.y.ticks, callback: v => v === 1 ? "UP" : "DN", stepSize: 1 } } } }
+  });
+  charts[`rt-${id}`] = new Chart(rtCtx, {
+    type: "line",
+    data: { labels: [], datasets: [{ data: [], borderColor: "#6366f1", borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: true, backgroundColor: "rgba(99,102,241,0.06)" }] },
+    options: { ...chartDefaults }
+  });
+}
+
+async function loadDomain(id, hours) {
+  const res = await fetch(`/api/domain/${id}/?hours=${hours}`);
+  const data = await res.json();
+
+  const dot = document.getElementById(`dot-${id}`);
+  const uptimeEl = document.getElementById(`uptime-${id}`);
+  const msEl = document.getElementById(`ms-${id}`);
+
+  const last = data.checks.at(-1);
+  if (last) {
+    dot.className = `status-dot ${last.up ? "up" : "down"}`;
+    msEl.textContent = last.ms != null ? `${last.ms}ms` : "—";
+    msEl.className = "val";
+  }
+  if (data.uptime != null) {
+    uptimeEl.textContent = `${data.uptime}%`;
+    uptimeEl.className = `val ${data.uptime > 90 ? "up" : "down"}`;
+  }
+
+  const labels = data.checks.map(c => new Date(c.t).toLocaleTimeString());
+  const upVals = data.checks.map(c => c.up ? 1 : 0);
+  const upColors = data.checks.map(c => c.up ? "#22c55e" : "#ef4444");
+  const rtVals = data.checks.map(c => c.ms);
+
+  const upChart = charts[`up-${id}`];
+  upChart.data.labels = labels;
+  upChart.data.datasets[0].data = upVals;
+  upChart.data.datasets[0].backgroundColor = upColors;
+  upChart.update();
+
+  const rtChart = charts[`rt-${id}`];
+  rtChart.data.labels = labels;
+  rtChart.data.datasets[0].data = rtVals;
+  rtChart.update();
+
+  // Incidents
+  const incEl = document.getElementById(`incidents-${id}`);
+  if (data.incidents.length === 0) { incEl.innerHTML = ""; return; }
+  incEl.innerHTML = `<div class="incidents-section"><h3>Incidents</h3>${
+    data.incidents.map(i => `
+      <div class="incident">
+        <span class="incident-badge ${i.resolved ? "resolved" : "open"}">${i.resolved ? "resolved" : "ongoing"}</span>
+        <div>
+          <div class="incident-title">${i.title}</div>
+          ${i.description ? `<div class="incident-desc">${i.description}</div>` : ""}
+          <div class="incident-time">${new Date(i.created_at).toLocaleString()}${i.resolved_at ? ` → ${new Date(i.resolved_at).toLocaleString()}` : ""}</div>
+        </div>
+      </div>`).join("")
+  }</div>`;
+}
+
+async function refresh() {
+  await Promise.all(DOMAINS.map(d => loadDomain(d.id, currentHours)));
+  document.getElementById("last-updated").textContent =
+    `updated ${new Date().toLocaleTimeString()}`;
+}
+
+// Init
+DOMAINS.forEach(d => mkCharts(d.id));
+refresh();
+setInterval(refresh, {{ refresh_interval }} * 1000);
+
+document.querySelectorAll(".window-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".window-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentHours = parseInt(btn.dataset.h);
+    refresh();
+  });
+});
+</script>
+</body>
+</html>
