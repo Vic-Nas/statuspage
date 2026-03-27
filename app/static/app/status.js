@@ -123,8 +123,14 @@ async function loadDomain(id, hours) {
     uptimeEl.className   = `val ${data.uptime > 90 ? "up" : "down"}`;
   }
 
-  // Up/down chart — RLE compressed
-  const { labels, upVals, upColors } = rleCompress(data.checks);
+  // Up/down chart — RLE compressed or raw depending on toggle
+  const { labels, upVals, upColors } = useCompression
+    ? rleCompress(data.checks)
+    : {
+        labels:   data.checks.map(c => new Date(c.t).toLocaleTimeString()),
+        upVals:   data.checks.map(c => c.up ? 1 : 0),
+        upColors: data.checks.map(c => c.up ? "#22c55e" : "#ef4444"),
+      };
   const upChart = charts[`up-${id}`];
   upChart.data.labels                        = labels;
   upChart.data.datasets[0].data              = upVals;
@@ -155,6 +161,8 @@ async function loadDomain(id, hours) {
 
 // ── Bootstrap ────────────────────────────────────────────────────────────────
 
+let useCompression = true;
+
 async function refresh() {
   await Promise.all(DOMAINS.map(d => loadDomain(d.id, currentHours)));
   document.getElementById("last-updated").textContent =
@@ -172,4 +180,11 @@ document.querySelectorAll(".window-btn").forEach(btn => {
     currentHours = parseInt(btn.dataset.h);
     refresh();
   });
+});
+
+const compressBtn = document.getElementById("compress-btn");
+compressBtn.addEventListener("click", () => {
+  useCompression = !useCompression;
+  compressBtn.classList.toggle("active", useCompression);
+  refresh();
 });
