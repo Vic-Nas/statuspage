@@ -29,6 +29,7 @@ python manage.py runserver
 | `ALLOWED_HOSTS` | `*` | Comma-separated allowed hosts |
 | `DB_DIR` | project root | Directory where `db.sqlite3` is stored |
 | `SITE_TITLE` | `System Status` | Page heading shown in the header |
+| `MAX_BARS` | `15` | Max bars shown in the Up/Down chart before graduated compression kicks in |
 
 ## Features
 
