@@ -22,7 +22,7 @@ python manage.py runserver
 ## Env vars
 
 | Variable | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `FREQUENCY` | `60` | Poll interval in seconds |
 | `SECRET_KEY` | dev default | Django secret key |
 | `DEBUG` | `true` | Set `false` in production |
