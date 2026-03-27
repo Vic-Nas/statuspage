@@ -24,7 +24,7 @@ def poll_domains():
             elapsed = int((time.monotonic() - start) * 1000)
             CheckResult.objects.create(
                 domain=domain,
-                up=resp.status_code < 500,
+                up=200 <= resp.status_code < 300,
                 response_ms=elapsed,
                 status_code=resp.status_code,
             )
