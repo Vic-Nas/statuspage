@@ -45,10 +45,12 @@ TEMPLATES = [{
     ]},
 }]
 
+DB_DIR = Path(os.environ.get("DB_DIR", BASE_DIR))
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": DB_DIR / "db.sqlite3",
     }
 }
 

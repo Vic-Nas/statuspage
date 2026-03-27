@@ -27,6 +27,7 @@ python manage.py runserver
 | `SECRET_KEY` | dev default | Django secret key |
 | `DEBUG` | `true` | Set `false` in production |
 | `ALLOWED_HOSTS` | `*` | Comma-separated allowed hosts |
+| `DB_DIR` | project root | Directory where `db.sqlite3` is stored |
 
 ## Features
 
