@@ -64,7 +64,7 @@ function barsToChart(bars) {
       const t2 = new Date(b.tEnd).toLocaleTimeString();
       return b.count > 1 ? `${t1} – ${t2} (${b.count})` : t1;
     }),
-    upVals:   bars.map(b => b.up ? 1 : 0),
+    upVals:   bars.map(_ => 1),
     upColors: bars.map(b => b.up ? "#22c55e" : "#ef4444"),
   };
 }
