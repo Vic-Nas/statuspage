@@ -65,3 +65,5 @@ APSCHEDULER_DATETIME_FORMAT = "N j, Y, f:s a"
 APSCHEDULER_RUN_NOW_TIMEOUT = 25
 
 MONITOR_RETENTION_DAYS = int(os.environ.get("RETENTION_DAYS", "7"))
+
+SITE_TITLE = os.environ.get("SITE_TITLE", "System Status")

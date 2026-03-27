@@ -28,6 +28,7 @@ python manage.py runserver
 | `DEBUG` | `true` | Set `false` in production |
 | `ALLOWED_HOSTS` | `*` | Comma-separated allowed hosts |
 | `DB_DIR` | project root | Directory where `db.sqlite3` is stored |
+| `SITE_TITLE` | `System Status` | Page heading shown in the header |
 
 ## Features
 

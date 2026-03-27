@@ -13,6 +13,7 @@ def index(request):
     return render(request, "app/index.html", {
         "domains": domains,
         "refresh_interval": settings.MONITOR_FREQUENCY,
+        "site_title": settings.SITE_TITLE,
     })
 
 

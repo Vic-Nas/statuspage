@@ -20,6 +20,14 @@
     --accent: #6366f1;
   }
 
+  body.light {
+    --bg: #f5f5f7;
+    --surface: #ffffff;
+    --border: #e2e2e8;
+    --text: #1a1a2e;
+    --muted: #8888a0;
+  }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
@@ -52,6 +60,77 @@
   header span {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+
+  .icon-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(99,102,241,0.08);
+  }
+
+  .icon-btn svg { display: block; }
+
+  /* Toggle switch */
+  .theme-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .toggle-track {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    background: var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .toggle-track.on { background: var(--accent); border-color: var(--accent); }
+
+  .toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+
+  .toggle-track.on .toggle-thumb { transform: translateX(16px); }
+
+  .toggle-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
     color: var(--muted);
   }
 
@@ -127,7 +206,11 @@
     font-size: 0.85rem;
     font-weight: 500;
     flex: 1;
+    color: var(--text);
+    text-decoration: none;
   }
+
+  a.domain-name:hover { color: var(--accent); }
 
   .domain-meta {
     display: flex;
@@ -239,8 +322,33 @@
 <body>
 
 <header>
-  <h1>◈ System Status</h1>
-  <span id="last-updated"></span>
+  <h1>◈ {{ site_title }}</h1>
+  <div class="header-actions">
+    <span id="last-updated"></span>
+    <a href="https://github.com/Vic-Nas/statuspage" target="_blank" rel="noopener" class="icon-btn" title="GitHub repo">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+          0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
+          -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66
+          .07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15
+          -.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27
+          .68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12
+          .51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48
+          0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+      </svg>
+    </a>
+    <a href="/admin/" class="icon-btn" title="Admin">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M11 2.5a2.5 2.5 0 1 1 .59 1.6L6.1 6.54a2.51 2.51 0 0 1 0 2.92l5.49 2.44A2.5 2.5 0 1 1 10.5 13l-5.49-2.44a2.5 2.5 0 1 1 0-5.12L10.41 3.1A2.5 2.5 0 0 1 11 2.5z"/>
+      </svg>
+    </a>
+    <div class="theme-toggle" title="Toggle light/dark">
+      <span class="toggle-label" id="theme-lbl">dark</span>
+      <div class="toggle-track" id="theme-track" onclick="toggleTheme()">
+        <div class="toggle-thumb"></div>
+      </div>
+    </div>
+  </div>
 </header>
 
 <div class="window-control">
@@ -256,7 +364,7 @@
   <div class="domain-card" id="card-{{ domain.id }}">
     <div class="domain-header">
       <span class="status-dot unknown" id="dot-{{ domain.id }}"></span>
-      <span class="domain-name">{{ domain.name }}</span>
+      <a href="{{ domain.url }}" target="_blank" rel="noopener" class="domain-name">{{ domain.name }}</a>
       <div class="domain-meta">
         <div class="meta-item">
           <div class="val" id="uptime-{{ domain.id }}">—</div>
@@ -284,6 +392,24 @@
 </div>
 
 <script>
+// Theme toggle
+function toggleTheme() {
+  const isLight = document.body.classList.toggle("light");
+  const track = document.getElementById("theme-track");
+  const lbl = document.getElementById("theme-lbl");
+  track.classList.toggle("on", isLight);
+  lbl.textContent = isLight ? "light" : "dark";
+  localStorage.setItem("theme", isLight ? "light" : "dark");
+}
+// Restore saved theme
+(function() {
+  if (localStorage.getItem("theme") === "light") {
+    document.body.classList.add("light");
+    document.getElementById("theme-track").classList.add("on");
+    document.getElementById("theme-lbl").textContent = "light";
+  }
+})();
+
 const DOMAINS = [{% for d in domains %}{ id: {{ d.id }}, name: "{{ d.name }}" },{% endfor %}];
 const charts = {};
 let currentHours = 24;
