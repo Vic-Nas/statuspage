@@ -15,49 +15,58 @@ function toggleTheme() {
   }
 })();
 
-// ── RLE compression ──────────────────────────────────────────────────────────
-// Collapses consecutive runs of identical up/down state into single bars.
-// A run containing ANY down check is marked down — no outage is ever hidden.
-// The response-time chart is left uncompressed (line chart handles density fine).
+// ── Compression ──────────────────────────────────────────────────────────────
+// Graduated left-priority compression:
+//   Start with raw bars (one per check).
+//   If over MAX_BARS, repeatedly find the leftmost adjacent same-state pair
+//   and merge them — until within MAX_BARS or no merges remain (fully RLE'd).
+//   If still over MAX_BARS after full RLE, that's fine — it's real data.
+//   A merged bar is red if ANY check in it was down — no outage is ever hidden.
+// Override the target via window.STATUS_MAX_BARS before this script loads.
 
-function rleCompress(checks) {
+const MAX_BARS = window.STATUS_MAX_BARS ?? 60;
+
+function compressBars(checks) {
   if (!checks.length) return { labels: [], upVals: [], upColors: [] };
 
-  const labels = [];
-  const upVals = [];
-  const upColors = [];
+  // Build one bar per check
+  let bars = checks.map(c => ({ up: c.up, tStart: c.t, tEnd: c.t, count: 1 }));
 
-  let runStart = checks[0];
-  let runUp = checks[0].up;   // false if ANY check in the run is down
-  let runCount = 1;
-
-  function pushRun(endCheck) {
-    // Label: "HH:MM – HH:MM (n checks)" for multi-check runs, just time for singles
-    const t1 = new Date(runStart.t).toLocaleTimeString();
-    const t2 = new Date(endCheck.t).toLocaleTimeString();
-    labels.push(runCount > 1 ? `${t1} – ${t2} (${runCount})` : t1);
-    upVals.push(runUp ? 1 : 0);
-    upColors.push(runUp ? "#22c55e" : "#ef4444");
-  }
-
-  for (let i = 1; i < checks.length; i++) {
-    const c = checks[i];
-    if (c.up === runStart.up && runUp === runStart.up) {
-      // Same state — extend run (but if this check is down, taint the run)
-      if (!c.up) runUp = false;
-      runCount++;
-    } else {
-      // State boundary — flush current run
-      pushRun(checks[i - 1]);
-      runStart = c;
-      runUp = c.up;
-      runCount = 1;
+  while (bars.length > MAX_BARS) {
+    // Find leftmost adjacent same-state pair and merge
+    let merged = false;
+    for (let i = 0; i < bars.length - 1; i++) {
+      if (bars[i].up === bars[i + 1].up) {
+        bars.splice(i, 2, {
+          up:     bars[i].up && bars[i + 1].up,
+          tStart: bars[i].tStart,
+          tEnd:   bars[i + 1].tEnd,
+          count:  bars[i].count + bars[i + 1].count,
+        });
+        merged = true;
+        break;
+      }
     }
+    if (!merged) break; // fully RLE'd, nothing left to merge
   }
-  // Flush final run
-  pushRun(checks[checks.length - 1]);
 
-  return { labels, upVals, upColors };
+  return barsToChart(bars);
+}
+
+function rawBars(checks) {
+  return barsToChart(checks.map(c => ({ up: c.up, tStart: c.t, tEnd: c.t, count: 1 })));
+}
+
+function barsToChart(bars) {
+  return {
+    labels:   bars.map(b => {
+      const t1 = new Date(b.tStart).toLocaleTimeString();
+      const t2 = new Date(b.tEnd).toLocaleTimeString();
+      return b.count > 1 ? `${t1} – ${t2} (${b.count})` : t1;
+    }),
+    upVals:   bars.map(b => b.up ? 1 : 0),
+    upColors: bars.map(b => b.up ? "#22c55e" : "#ef4444"),
+  };
 }
 
 // ── Chart setup ──────────────────────────────────────────────────────────────
@@ -114,33 +123,30 @@ async function loadDomain(id, hours) {
 
   const last = data.checks.at(-1);
   if (last) {
-    dot.className   = `status-dot ${last.up ? "up" : "down"}`;
+    dot.className    = `status-dot ${last.up ? "up" : "down"}`;
     msEl.textContent = last.ms != null ? `${last.ms}ms` : "—";
-    msEl.className  = "val";
+    msEl.className   = "val";
   }
   if (data.uptime != null) {
     uptimeEl.textContent = `${data.uptime}%`;
     uptimeEl.className   = `val ${data.uptime > 90 ? "up" : "down"}`;
   }
 
-  // Up/down chart — RLE compressed or raw depending on toggle
+  // Up/down chart
   const { labels, upVals, upColors } = useCompression
-    ? rleCompress(data.checks)
-    : {
-        labels:   data.checks.map(c => new Date(c.t).toLocaleTimeString()),
-        upVals:   data.checks.map(c => c.up ? 1 : 0),
-        upColors: data.checks.map(c => c.up ? "#22c55e" : "#ef4444"),
-      };
+    ? compressBars(data.checks)
+    : rawBars(data.checks);
+
   const upChart = charts[`up-${id}`];
-  upChart.data.labels                        = labels;
-  upChart.data.datasets[0].data              = upVals;
-  upChart.data.datasets[0].backgroundColor   = upColors;
+  upChart.data.labels                      = labels;
+  upChart.data.datasets[0].data            = upVals;
+  upChart.data.datasets[0].backgroundColor = upColors;
   upChart.update();
 
-  // Response-time chart — raw data (line chart handles density well)
+  // Response-time chart — always raw (line chart handles density fine)
   const rtChart = charts[`rt-${id}`];
-  rtChart.data.labels                  = data.checks.map(c => new Date(c.t).toLocaleTimeString());
-  rtChart.data.datasets[0].data        = data.checks.map(c => c.ms);
+  rtChart.data.labels           = data.checks.map(c => new Date(c.t).toLocaleTimeString());
+  rtChart.data.datasets[0].data = data.checks.map(c => c.ms);
   rtChart.update();
 
   // Incidents
@@ -173,18 +179,24 @@ DOMAINS.forEach(d => mkCharts(d.id));
 refresh();
 setInterval(refresh, REFRESH_INTERVAL * 1000);
 
-document.querySelectorAll(".window-btn").forEach(btn => {
+// Window buttons — scoped to [data-h] only, never touches the compress button
+document.querySelectorAll(".window-btn[data-h]").forEach(btn => {
   btn.addEventListener("click", () => {
-    document.querySelectorAll(".window-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".window-btn[data-h]").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     currentHours = parseInt(btn.dataset.h);
     refresh();
   });
 });
 
+// Compress toggle
+// Default: compressed (active), label = "decompress" (what clicking will do)
 const compressBtn = document.getElementById("compress-btn");
+compressBtn.textContent = "decompress";
+
 compressBtn.addEventListener("click", () => {
   useCompression = !useCompression;
+  compressBtn.textContent = useCompression ? "decompress" : "compress";
   compressBtn.classList.toggle("active", useCompression);
   refresh();
 });
