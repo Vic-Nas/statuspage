@@ -14,6 +14,7 @@ def index(request):
         "domains": domains,
         "refresh_interval": settings.MONITOR_FREQUENCY,
         "site_title": settings.SITE_TITLE,
+        "max_bars": settings.MONITOR_MAX_BARS,
     })
 
 

@@ -24,7 +24,7 @@ function toggleTheme() {
 //   A merged bar is red if ANY check in it was down — no outage is ever hidden.
 // Override the target via window.STATUS_MAX_BARS before this script loads.
 
-const MAX_BARS = window.STATUS_MAX_BARS ?? 60;
+const MAX_BARS = window.STATUS_MAX_BARS;
 
 function compressBars(checks) {
   if (!checks.length) return { labels: [], upVals: [], upColors: [] };
